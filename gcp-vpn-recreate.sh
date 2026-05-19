@@ -108,6 +108,31 @@ for i in "${!SEGMENTS[@]}"; do
   echo "  route-${ROUTE_NUM} (${SEGMENTS[$i]}) creada"
 done
 
+# Validar/crear regla de firewall para permitir todo el tráfico desde segmentos remotos
+echo ""
+echo "=== Validando regla de firewall ==="
+FW_RULE="${TUNNEL}-allow-onprem"
+EXISTING_FW=$(gcloud compute firewall-rules describe "$FW_RULE" --project="$PROJECT" --format="value(name)" 2>/dev/null || echo "")
+
+if [[ -n "$EXISTING_FW" ]]; then
+  echo "  Regla $FW_RULE existe, actualizando source-ranges..."
+  gcloud compute firewall-rules update "$FW_RULE" \
+    --project="$PROJECT" \
+    --source-ranges="$REMOTE_SELECTORS" 2>&1
+  echo "  Regla actualizada"
+else
+  echo "  Regla $FW_RULE no existe, creando..."
+  gcloud compute firewall-rules create "$FW_RULE" \
+    --project="$PROJECT" \
+    --network="$NETWORK" \
+    --direction=INGRESS \
+    --action=ALLOW \
+    --rules=all \
+    --source-ranges="$REMOTE_SELECTORS" \
+    --description="Permitir todo el tráfico desde segmentos remotos VPN" 2>&1
+  echo "  Regla creada"
+fi
+
 # Verificar
 echo ""
 echo "=== Esperando establecimiento ==="

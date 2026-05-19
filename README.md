@@ -120,6 +120,10 @@ Agregar el segmento `10.150.8.0/24` a una VPN existente que ya tiene 3 segmentos
   route-3 (10.150.31.0/24) creada
   route-4 (10.150.8.0/24) creada
 
+=== Validando regla de firewall ===
+  Regla vpn1-tunnel-1-allow-onprem no existe, creando...
+  Regla creada
+
 === Esperando establecimiento ===
   Intento 1/10 - Estado: FIRST_HANDSHAKE
   Intento 2/10 - Estado: ESTABLISHED
@@ -145,13 +149,22 @@ Agregar el segmento `10.150.8.0/24` a una VPN existente que ya tiene 3 segmentos
 - El script requiere confirmación explícita escribiendo `SI`.
 - Si el túnel no se establece en 2.5 minutos, verifica la configuración del peer.
 
+### Regla de firewall
+
+El script valida automáticamente que exista una regla de firewall que permita **todo el tráfico** desde los segmentos remotos hacia las VMs en GCP:
+
+- **Si la regla `{tunnel}-allow-onprem` ya existe**: actualiza los `source-ranges` con todos los segmentos remotos proporcionados.
+- **Si no existe**: crea una nueva regla con `--rules=all` (todos los protocolos y puertos) desde los segmentos remotos.
+
+Esto garantiza que las VMs en GCP puedan comunicarse bidireccionalmente con las VMs on-premises a través del túnel sin restricciones de firewall del lado de GCP.
+
 ### Qué NO se destruye
 
 - El Target VPN Gateway (IP pública estática)
 - Las Forwarding Rules (ESP, UDP 500, UDP 4500)
 - La red VPC
 
-Solo se destruye y recrea el **túnel** y sus **rutas**.
+Solo se destruye y recrea el **túnel** y sus **rutas**. La regla de firewall se crea o actualiza (nunca se elimina).
 
 ## Troubleshooting
 
